@@ -1,0 +1,78 @@
+{{ define "login.tmpl" }}
+<!DOCTYPE html>
+<html>
+    <head>
+        </head>
+ <body>
+<!-- فرم مرحله اول -->
+    <!-- مرحله اول: وارد کردن شماره تلفن -->
+    <div id="step1">
+        <form id="loginForm">
+            <label for="phone"><b>Phone Number</b></label>
+            <input type="text" placeholder="Enter phone number" id="phone" required>
+            <button type="button" onclick="submitPhone()">Send OTP</button>
+        </form>
+    </div>
+
+    <!-- مرحله دوم: وارد کردن کد تایید -->
+    <div id="step2" style="display:none;">
+        <form id="otpForm">
+            <label for="otp"><b>OTP Code</b></label>
+            <input type="text" placeholder="Enter OTP" id="otp" required>
+            <button type="button" onclick="submitOTP()">Verify OTP</button>
+        </form>
+    </div>
+    <script>
+        function submitPhone() {
+            const phone = document.getElementById('phone').value;
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phone: phone })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.step === "2") {
+                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('step2').style.display = 'block';
+                    console.log('OTP sent successfully');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function submitOTP() {
+            const otp = document.getElementById('otp').value;
+
+
+            fetch('/login/vr', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({  otp: otp })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message === "Login successful") {
+                    alert('Login successful');
+                    window.location.href = '/dashboard'; // ریدایرکت به صفحه داشبورد
+                } else {
+                    alert('Invalid OTP');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+    </body>
+</html>
+{{ end }}
