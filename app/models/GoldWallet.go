@@ -5,7 +5,6 @@ import (
 )
 
 type WalletGold struct {
-	UserID        uint64    `ch:"user_id"`      // برای ذخیره شناسه کاربر
 	MelliNumber   string    `ch:"melli_number"` // برای ذخیره شناسه ملی کاربر
 	BalanceIn     float64   `ch:"balance_in"`   // موجودی ریالی کاربر
 	BalanceOut    float64   `ch:"balance_out"`  // موجودی ریالی کاربر

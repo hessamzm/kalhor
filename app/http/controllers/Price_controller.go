@@ -48,8 +48,11 @@ func (p *PriceController) Get(ctx http.Context) http.Response {
 		})
 	}
 
-	// چاپ داده‌ها برای اشکال‌زدایی
-	fmt.Printf("Retrieved price data: %+v\n", price)
+	if utils.KlDebug {
+		// چاپ داده‌ها برای اشکال‌زدایی
+		fmt.Printf("Retrieved price data: %+v\n", price)
+
+	}
 
 	// اگر داده‌ای پیدا شد
 	return ctx.Response().Json(http.StatusOK, http.Json{

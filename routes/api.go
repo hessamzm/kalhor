@@ -28,11 +28,13 @@ func Api() {
 
 	//after auth
 
-	//user info
+	//info
 	facades.Route().Middleware(middleware.Auth()).Get("/userinfo", userController.UserInfo)
+	facades.Route().Middleware(middleware.Auth()).Get("/userwallet/:time-frame/:order/:type", userController.WalletInfo)
+	facades.Route().Post("/send-message", NotificationController.SendMessage)
 
 	//notif
-	facades.Route().Post("/send-message", NotificationController.SendMessage)
+
 	facades.Route().Post("/mark-as-seen", NotificationController.MarkAsSeen)
 	facades.Route().Post("/store-admin-message", NotificationController.StoreAdminMessage)
 

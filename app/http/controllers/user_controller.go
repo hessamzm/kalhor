@@ -15,30 +15,31 @@ import (
 type UserController struct{}
 
 var user models.User
-
 var Otp models.Otp
 var input models.Input
+var wg models.WalletGold
+var wr models.WalletRial
+
+func generateUniqueUserNum() string {
+	rand.Seed(time.Now().UnixNano())
+	return fmt.Sprintf("%07d", rand.Intn(9000000)+1000000) // تولید عدد 7 رقمی
+}
 
 func (c *UserController) Register(ctx http.Context) http.Response {
 	user = models.User{}
 	Otp = models.Otp{}
-	// گرفتن داده‌های ورودی
+
 	if err := ctx.Request().Bind(&input); err != nil {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
 	}
 
-	if utils.KlDebug {
-		fmt.Println(input)
-	}
-
 	facades.Orm().Query().Where("phone = ?", input.Phone).Get(&Otp)
-	// بررسی اینکه آیا شماره تلفن قبلاً ثبت شده است یا خیر
 	facades.Orm().Query().Where("phone = ?", input.Phone).First(&user)
+
 	if user.Phone == input.Phone {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Phone number already exists"})
 	}
 
-	// بررسی اینکه آیا کد ملی قبلاً ثبت شده است یا خیر
 	facades.Orm().Query().Where("melli_number = ?", input.MelliNumber).First(&user)
 
 	if user.MelliNumber == input.MelliNumber {
@@ -48,32 +49,36 @@ func (c *UserController) Register(ctx http.Context) http.Response {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Otp code not valid"})
 	}
 
+	// تولید یک UserNum یکتا
+	var newUserNum string
+	for {
+		newUserNum = generateUniqueUserNum()
+		var existingUser models.User
+		facades.Orm().Query().Where("user_num = ?", newUserNum).First(&existingUser)
+		if existingUser.ID == 0 {
+			break // اگر این UserNum در دیتابیس وجود ندارد، آن را انتخاب کنید
+		}
+	}
+
 	// ایجاد کاربر جدید
 	newUser := models.User{
 		Name:          input.Name,
 		MelliNumber:   input.MelliNumber,
 		Phone:         input.Phone,
 		TarikhTavalod: input.TarikhTavalod,
+		UserNum:       newUserNum,
 	}
-	if utils.KlDebug {
-		fmt.Println(newUser)
-		fmt.Println(Otp.Status)
-	}
-	// ذخیره کاربر جدید در دیتابیس
+
 	if err := facades.Orm().Query().Create(&newUser); err != nil {
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "Error creating user"})
 	}
 
-	token, err := facades.Auth(ctx).LoginUsingID(user.ID)
-
-	if utils.KlDebug {
-		fmt.Println(token)
-		fmt.Println(err)
+	token, err := facades.Auth(ctx).LoginUsingID(newUser.ID)
+	if err != nil {
+		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "Error logging in"})
 	}
+	return ctx.Response().Header("Authorization", token).Json(http.StatusCreated, map[string]string{"user": newUserNum})
 
-	// ارسال پیامک تأیید با استفاده از Melipayamak
-	//services.SendByBaseNumber("your_username", "your_password", "Your verification code is: 123456", newUser.Phone, 12345)
-	return ctx.Response().Json(http.StatusCreated, token)
 }
 
 func (c *UserController) Login(ctx http.Context) http.Response {
@@ -118,7 +123,9 @@ func (c *UserController) Login(ctx http.Context) http.Response {
 	if utils.KlDebug {
 		fmt.Println("jwt eeror", err)
 	}
-	return ctx.Response().Json(http.StatusCreated, token)
+	return ctx.Response().Header("Authorization", token).Json(http.StatusOK, map[string]any{
+		"status": "success",
+	})
 }
 
 func (c *UserController) IsRegister(ctx http.Context) http.Response {
@@ -127,10 +134,14 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 	input = models.Input{}
 
 	if err := ctx.Request().Bind(&input); err != nil {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "Invalid input"})
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"status": "badrequest",
+			"error":  "Invalid input"})
 	}
 	if input.Phone == "" {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "Phone number required"})
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"status": "badrequest",
+			"error":  "Phone number required"})
 	}
 
 	if utils.KlDebug {
@@ -141,20 +152,25 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 
 	facades.Orm().Query().Where("phone = ?", input.Phone).Get(&user)
 
-	if user.Phone != input.Phone {
-		return ctx.Response().Json(http.StatusNotFound, map[string]string{"error": "user not found"})
-	}
-
 	otpCode := generateOtp()
 
 	// ارسال پیامک
 	response, err := services.SendByBaseNumber("9216318161", "Y@N!0", otpCode, input.Phone, 246010)
 	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "SMS sending failed"})
+		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
+			"status": "server-error-checkphonenumber",
+			"error":  "SMS sending failed"})
 	}
 
 	if utils.KlDebug {
 		fmt.Println("sms response: ", response)
+	}
+
+	if user.Phone != input.Phone {
+		return ctx.Response().Json(http.StatusNotFound, map[string]string{"status": "user not found",
+			"sms":   "send",
+			"go-to": "regestry",
+		})
 	}
 
 	// به‌روزرسانی Otp
@@ -170,9 +186,9 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 		fmt.Println("Otp response: ", Otp)
 	}
 
-	return ctx.Response().Json(http.StatusOK, map[string]string{"status": "200",
-		"isfund":  "true",
-		"masages": "gotologin"})
+	return ctx.Response().Json(http.StatusOK, map[string]string{"status": "user-finde",
+		"goto": "login",
+		"sms":  "send"})
 }
 
 func (c *UserController) VerifyCode(ctx http.Context) http.Response {
@@ -292,6 +308,7 @@ func (c *UserController) AskVerifyCode(ctx http.Context) http.Response {
 }
 
 func (c *UserController) UserInfo(ctx http.Context) http.Response {
+	user = models.User{}
 	// اعتبارسنجی JWT
 	istrue, err := services.MyJwt(ctx)
 	if !istrue {
@@ -308,6 +325,97 @@ func (c *UserController) UserInfo(ctx http.Context) http.Response {
 	mapstring := console.UserInfo(user)
 
 	return ctx.Response().Json(http.StatusOK, mapstring)
+}
+
+func (c *UserController) WalletInfo(ctx http.Context) http.Response {
+	user := models.User{}
+	// اعتبارسنجی JWT
+	istrue, err := services.MyJwt(ctx)
+	if !istrue {
+		return ctx.Response().Json(http.StatusUnauthorized, map[string]string{"error": err})
+	}
+
+	// دریافت اطلاعات کاربر
+	facades.Auth(ctx).User(&user)
+	facades.Orm().Query().Where("phone = ?", user.Phone).Get(&user)
+
+	// دریافت پارامترهای مسیر
+	timeFrame := ctx.Request().Route("time-frame")
+	order := ctx.Request().Route("order")
+	walletType := ctx.Request().Route("type")
+
+	var query string
+
+	// تنظیم شرط زمانی بر اساس پارامتر time-frame
+	timeCondition := ""
+	switch timeFrame {
+	case "week":
+		timeCondition = "AND event_time >= now() - INTERVAL 1 WEEK"
+	case "month":
+		timeCondition = "AND event_time >= now() - INTERVAL 1 MONTH"
+	case "year":
+		timeCondition = "AND event_time >= now() - INTERVAL 1 YEAR"
+	default:
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"status": "badrequest",
+			"error":  "Invalid time frame",
+		})
+	}
+
+	// تنظیم order بر اساس خرید (BalanceIn) یا فروش (BalanceOut)
+	orderCondition := ""
+	switch order {
+	case "sell":
+		orderCondition = "AND balance_out > 0"
+	case "buy":
+		orderCondition = "AND balance_in > 0"
+	default:
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"status": "badrequest",
+			"error":  "Invalid order type",
+		})
+	}
+	kal := "kal" + user.MelliNumber
+	// تنظیم جدول بر اساس پارامتر type
+	switch walletType {
+	case "gold":
+		//var wallets models.WalletGold
+		query = fmt.Sprintf("SELECT * FROM wallet_gold WHERE melli_number = '%s' %s %s ORDER BY event_time DESC", kal, timeCondition, orderCondition)
+		s, e := services.NewWalletService()
+
+		wallets, e := s.Queryforgold(query)
+		fmt.Printf("e", e)
+		fmt.Printf("wallets 6", wallets)
+		fmt.Println(wallets)
+		if e != nil {
+			return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
+				"status": "badrequest",
+			})
+		}
+		return ctx.Response().Json(http.StatusOK, wallets)
+
+	case "rial":
+
+		query = fmt.Sprintf("SELECT * FROM wallet_rial WHERE melli_number = '%s' %s %s ORDER BY event_time DESC", kal, timeCondition, orderCondition)
+
+		s, e := services.NewWalletServiceRial()
+
+		wallets, e := s.Queryforrial(query)
+		fmt.Printf("e", e)
+		fmt.Printf("wallets 6", wallets)
+		if e != nil {
+			return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
+				"status": "badrequest",
+			})
+		}
+		return ctx.Response().Json(http.StatusOK, wallets)
+	default:
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
+			"status": "badrequest",
+			"error":  "Invalid wallet type",
+		})
+	}
+
 }
 
 func generateOtp() string {

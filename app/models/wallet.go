@@ -11,5 +11,7 @@ type UserWallet struct {
 	Outcome          string `json:"outcome"`
 	Shabanumber      string `json:"shabanumber"`
 	ShomareTrakonesh string `json:"shomaretrakonesh"`
-	createat         time.Time
+
+	UpdateAt time.Time `json:"update_at"`
+	createat time.Time
 }

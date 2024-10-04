@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-var wallet models.WalletGold
-
 type WalletService struct {
 	db driver.Conn
 }
@@ -98,7 +96,7 @@ func (s *WalletServiceRial) InsertWalletGoldRial(gr *models.WalletRial) error {
 	query := `INSERT INTO wallet_rial (trakonesh_id , melli_number , balance_out ,event_time) VALUES (?, ?, ?, ?)`
 	return s.db.Exec(context.Background(), query, gr.TrakoneshId, "kal"+gr.MelliNumber, gr.BalanceOut, gr.EventTime)
 }
-func (s *WalletService) ShowWalletGold(gw *models.WalletGold, m string) ([]*models.WalletGold, error) {
+func (s *WalletService) ShowWalletGold(m string) ([]*models.WalletGold, error) {
 	m = "kal" + m
 	query := fmt.Sprintf("SELECT * FROM wallet_gold WHERE melli_number = '%s';", m)
 
@@ -117,8 +115,6 @@ func (s *WalletService) ShowWalletGold(gw *models.WalletGold, m string) ([]*mode
 	for rows.Next() {
 		wallet := &models.WalletGold{}
 		e := rows.Scan(
-
-			&wallet.UserID,
 			&wallet.MelliNumber,
 			&wallet.BalanceIn,
 			&wallet.BalanceOut,
@@ -145,6 +141,91 @@ func (s *WalletService) ShowWalletGold(gw *models.WalletGold, m string) ([]*mode
 
 	return wallets, nil
 }
+
+func (s *WalletService) Queryforgold(q string) ([]*models.WalletGold, error) {
+	fmt.Println(q)
+	rows, err := s.db.Query(context.Background(), q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	fmt.Println(rows)
+	var wallets []*models.WalletGold
+	fmt.Printf("wallet 2", wallets)
+	for rows.Next() {
+		fmt.Println("test for")
+		wallet := &models.WalletGold{}
+		if err := rows.Scan(
+			&wallet.MelliNumber,
+			&wallet.BalanceIn,
+			&wallet.BalanceOut,
+			&wallet.FeebalanceIn,
+			&wallet.FeebalanceOut,
+			&wallet.FreezBlIn,
+			&wallet.FreezBlOut,
+			&wallet.BanBlIn,
+			&wallet.BanBlOut,
+			&wallet.EventTime,
+		); err != nil {
+			return nil, err
+		}
+		wallets = append(wallets, wallet)
+		fmt.Printf("Scanned wallet: %v\n", wallet) // چاپ نتایج اسکن شده
+	}
+
+	fmt.Printf("wallet 3", wallets)
+	// بررسی اینکه آیا سطری دریافت شده است یا خیر
+	if len(wallets) == 0 {
+		fmt.Println("No user found with the given MelliNumber.")
+		return nil, nil
+	}
+	if utils.KlDebug {
+		fmt.Println("wallets:", wallets)
+	}
+	return wallets, err
+}
+func (r *WalletServiceRial) Queryforrial(q string) ([]*models.WalletRial, error) {
+	fmt.Println(q)
+	rows, err := r.db.Query(context.Background(), q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var wallets []*models.WalletRial
+	fmt.Printf("wallet 2", wallets)
+	for rows.Next() {
+		wallet := &models.WalletRial{}
+		fmt.Println("test for")
+		err := rows.Scan(
+			&wallet.MelliNumber,
+			&wallet.BalanceIn,
+			&wallet.BalanceOut,
+			&wallet.FreezBlIn,
+			&wallet.FreezBlOut,
+			&wallet.BanBlIn,
+			&wallet.BanBlOut,
+			&wallet.EventTime,
+			&wallet.TrakoneshId,
+		)
+		if err != nil {
+			return nil, err
+		}
+		wallets = append(wallets, wallet)
+		fmt.Printf("Scanned wallet: %v\n", wallet)
+	}
+	fmt.Printf("wallet 3", wallets)
+	// بررسی اینکه آیا سطری دریافت شده است یا خیر
+	if len(wallets) == 0 {
+		fmt.Println("No user found with the given MelliNumber.")
+		return nil, nil
+	}
+	if utils.KlDebug {
+		fmt.Println("wallets:", wallets)
+	}
+	return wallets, err
+}
+
 func (s *WalletService) GetBalanceDifference(m string) (float64, error) {
 	m = "kal" + m
 	query := fmt.Sprintf("SELECT SUM(balance_in) AS total_balance_in, SUM(balance_out) AS total_balance_out FROM wallet_gold WHERE melli_number = '%s';", m)

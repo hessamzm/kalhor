@@ -20,7 +20,7 @@ func MyJwt(ctx http.Context) (bool, string) {
 	if payload == nil {
 		fmt.Println(payload)
 		//fmt.Println(payload.Key)
-		fmt.Println(token)
+		//fmt.Println(token)
 	}
 
 	if err != nil {
