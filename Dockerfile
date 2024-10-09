@@ -1,24 +1,44 @@
-FROM golang:alpine AS builder
+FROM ubuntu:22.04 AS builder
 
+# نصب ابزارهای لازم
+RUN apt-get update && \
+    apt-get install -y curl golang git && \
+    rm -rf /var/lib/apt/lists/*
+
+# تنظیمات محیط
 ENV GO111MODULE=on \
-    CGO_ENABLED=0  \
-    GOARCH="amd64" \
+    CGO_ENABLED=0 \
+    GOARCH=amd64 \
     GOOS=linux
 
-WORKDIR /build
-COPY goravel .
-RUN go mod tidy
-RUN go build --ldflags "-extldflags -static" -o main .
+# دایرکتوری کاری
+WORKDIR /
 
-FROM alpine:latest
+# کپی فایل‌های go.mod و go.sum
+COPY /go.mod .
+COPY /go.sum .
 
-WORKDIR /www
+# دانلود وابستگی‌ها
+RUN GOPROXY=https://goproxy.cn go mod download
 
-COPY --from=builder /build/main /www/
-COPY --from=builder /build/database/ /www/database/
-COPY --from=builder /build/public/ /www/public/
-COPY --from=builder /build/storage/ /www/storage/
-COPY --from=builder /build/resources/ /www/resources/
-COPY --from=builder /build/.env /www/.env
+# کپی سایر فایل‌های پروژه
+COPY / .
 
-ENTRYPOINT ["/www/main"]
+# ساخت برنامه
+RUN go build -o main .
+
+# مرحله دوم: تصویر نهایی
+FROM ubuntu:22.04
+
+# تنظیم دایرکتوری کاری
+WORKDIR /www/wwwroot/app.kalhorgold.ir
+
+# کپی فایل اجرایی و سایر منابع
+COPY --from=builder /main .
+COPY --from=builder /public ./public/
+COPY --from=builder /storage ./storage/
+COPY --from=builder /resources ./resources/
+COPY --from=builder /.env .
+
+# اجرای برنامه
+ENTRYPOINT ["./main"]

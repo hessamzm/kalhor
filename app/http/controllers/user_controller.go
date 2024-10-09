@@ -22,7 +22,7 @@ var wr models.WalletRial
 
 func generateUniqueUserNum() string {
 	rand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("%07d", rand.Intn(9000000)+1000000) // تولید عدد 7 رقمی
+	return fmt.Sprintf("%07d", rand.Intn(9000)+1000) // تولید عدد 7 رقمی
 }
 
 func (c *UserController) Register(ctx http.Context) http.Response {
@@ -45,6 +45,10 @@ func (c *UserController) Register(ctx http.Context) http.Response {
 	if user.MelliNumber == input.MelliNumber {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Melli number already exists"})
 	}
+	if len(input.MelliNumber) != 10 {
+		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Melli number must have 10 numeric"})
+	}
+
 	if Otp.Status == false {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Otp code not valid"})
 	}
@@ -60,15 +64,20 @@ func (c *UserController) Register(ctx http.Context) http.Response {
 		}
 	}
 
+	datetavalod, err := time.Parse("2006/01/02", input.TarikhTavalod)
+	if err != nil {
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "Invalid date format"})
+	}
+
 	// ایجاد کاربر جدید
 	newUser := models.User{
 		Name:          input.Name,
 		MelliNumber:   input.MelliNumber,
 		Phone:         input.Phone,
-		TarikhTavalod: input.TarikhTavalod,
+		TarikhTavalod: datetavalod,
 		UserNum:       newUserNum,
 	}
-
+	user.OtpCode = true
 	if err := facades.Orm().Query().Create(&newUser); err != nil {
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "Error creating user"})
 	}
@@ -77,6 +86,12 @@ func (c *UserController) Register(ctx http.Context) http.Response {
 	if err != nil {
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "Error logging in"})
 	}
+
+	Otp.OtpCode = ""
+	Otp.Step = 0
+	Otp.Phone = input.Phone
+	Otp.Status = false
+	facades.Orm().Query().Save(&Otp)
 	return ctx.Response().Header("Authorization", token).Json(http.StatusCreated, map[string]string{"user": newUserNum})
 
 }
@@ -167,6 +182,12 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 	}
 
 	if user.Phone != input.Phone {
+		Otp.Step = 1
+		Otp.Phone = input.Phone
+		Otp.OtpCode = otpCode
+		Otp.UpdatedAt = time.Now()
+
+		facades.Orm().Query().UpdateOrCreate(&Otp, Otp, otpCode)
 		return ctx.Response().Json(http.StatusNotFound, map[string]string{"status": "user not found",
 			"sms":   "send",
 			"go-to": "regestry",
@@ -180,7 +201,7 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 	Otp.UpdatedAt = time.Now()
 
 	// ذخیره Otp در دیتابیس
-	facades.Orm().Query().Save(&Otp)
+	facades.Orm().Query().Update(&Otp)
 
 	if utils.KlDebug {
 		fmt.Println("Otp response: ", Otp)
