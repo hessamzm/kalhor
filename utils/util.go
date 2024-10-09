@@ -150,6 +150,7 @@ func GetDatamethodget(url string, ErrorArgomans string) (map[string]interface{},
 	//}
 }
 func SafeParseFloat(value string) (float64, error) {
+
 	// حذف فاصله‌ها و کاراکترهای غیر ضروری
 	value = strings.TrimSpace(value)
 	// تبدیل به float64
