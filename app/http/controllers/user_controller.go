@@ -12,17 +12,6 @@ import (
 	"time"
 )
 
-type WalletResponse struct {
-	BalanceIn     float64   `json:"balance_in"`
-	BalanceOut    float64   `json:"balance_out"`
-	FeebalanceIn  float64   `json:"feebalance_in,omitempty"`
-	FeebalanceOut float64   `json:"feebalance_out,omitempty"`
-	FreezBlIn     float64   `json:"freez_bl_in,omitempty"`
-	FreezBlOut    float64   `json:"freez_bl_out,omitempty"`
-	BanBlIn       float64   `json:"ban_bl_in,omitempty"`
-	BanBlOut      float64   `json:"ban_bl_out,omitempty"`
-	EventTime     time.Time `json:"event_time"`
-}
 type UserController struct{}
 
 var user models.User
@@ -33,7 +22,7 @@ var wr models.WalletRial
 
 func generateUniqueUserNum() string {
 	rand.Seed(time.Now().UnixNano())
-	return fmt.Sprintf("%07d", rand.Intn(9000000)+1000000) // تولید عدد 7 رقمی
+	return fmt.Sprintf("%07d", rand.Intn(90000)+10000) // تولید عدد 5 رقمی
 }
 
 func (c *UserController) Register(ctx http.Context) http.Response {
@@ -56,6 +45,10 @@ func (c *UserController) Register(ctx http.Context) http.Response {
 	if user.MelliNumber == input.MelliNumber {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Melli number already exists"})
 	}
+	if len(input.MelliNumber) != 10 {
+		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Melli number must 10 len"})
+	}
+
 	if Otp.Status == false {
 		return ctx.Response().Json(http.StatusConflict, map[string]string{"error": "Otp code not valid"})
 	}
@@ -70,17 +63,20 @@ func (c *UserController) Register(ctx http.Context) http.Response {
 			break // اگر این UserNum در دیتابیس وجود ندارد، آن را انتخاب کنید
 		}
 	}
-
+	datetavalod, err := time.Parse("2006/01/02", input.TarikhTavalod)
+	if err != nil {
+		return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "Invalid date format"})
+	}
 	// ایجاد کاربر جدید
 	newUser := models.User{
 		Name:          input.Name,
 		MelliNumber:   input.MelliNumber,
 		Phone:         input.Phone,
-		TarikhTavalod: input.TarikhTavalod,
+		TarikhTavalod: datetavalod,
 		UserNum:       newUserNum,
 	}
 
-	if err := facades.Orm().Query().Create(&newUser); err != nil {
+	if err := facades.Orm().Query().UpdateOrCreate(user.MelliNumber, input.MelliNumber, &newUser); err != nil {
 		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "Error creating user"})
 	}
 
@@ -140,11 +136,10 @@ func (c *UserController) Login(ctx http.Context) http.Response {
 }
 
 func (c *UserController) IsRegister(ctx http.Context) http.Response {
-	user := models.User{}
-	otp := models.Otp{}
-	input := models.Input{}
+	user = models.User{}
+	Otp = models.Otp{}
+	input = models.Input{}
 
-	// اعتبارسنجی ورودی
 	if err := ctx.Request().Bind(&input); err != nil {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
 			"status": "badrequest",
@@ -156,18 +151,12 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 			"error":  "Phone number required"})
 	}
 
-	if len(input.Phone) < 10 || len(input.Phone) > 12 {
-		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
-			"status": "badrequest",
-			"error":  "Phone number required 10 or 11 number",
-		})
-	}
-
 	if utils.KlDebug {
 		fmt.Println("Phone input from login page:", input.Phone)
 	}
 
 	// پیدا کردن کاربر بر اساس شماره تلفن
+
 	facades.Orm().Query().Where("phone = ?", input.Phone).Get(&user)
 
 	otpCode := generateOtp()
@@ -185,30 +174,28 @@ func (c *UserController) IsRegister(ctx http.Context) http.Response {
 	}
 
 	if user.Phone != input.Phone {
-		return ctx.Response().Json(http.StatusNotFound, map[string]string{
-			"status": "user not found",
-			"sms":    "send",
-			"go-to":  "regestry",
+		return ctx.Response().Json(http.StatusNotFound, map[string]string{"status": "user not found",
+			"sms":   "send",
+			"go-to": "regestry",
 		})
 	}
 
-	// ذخیره یا به‌روزرسانی Otp در دیتابیس
-	facades.Orm().Query().UpdateOrCreate(&otp, models.Otp{
-		Phone: input.Phone,
-	}, models.Otp{
-		Step:      1,
-		OtpCode:   otpCode,
-		UpdatedAt: time.Now(),
-	})
+	// به‌روزرسانی Otp
+	Otp.Step = 1
+	Otp.Phone = input.Phone
+	Otp.OtpCode = otpCode
+	Otp.UpdatedAt = time.Now()
+
+	// ذخیره Otp در دیتابیس
+	facades.Orm().Query().Save(&Otp)
 
 	if utils.KlDebug {
-		fmt.Println("Otp response: ", otp)
+		fmt.Println("Otp response: ", Otp)
 	}
 
-	return ctx.Response().Json(http.StatusOK, map[string]string{
-		"status": "user-found",
-		"goto":   "login",
-		"sms":    "send"})
+	return ctx.Response().Json(http.StatusOK, map[string]string{"status": "user-finde",
+		"goto": "login",
+		"sms":  "send"})
 }
 
 func (c *UserController) VerifyCode(ctx http.Context) http.Response {
@@ -349,7 +336,6 @@ func (c *UserController) UserInfo(ctx http.Context) http.Response {
 
 func (c *UserController) WalletInfo(ctx http.Context) http.Response {
 	user := models.User{}
-
 	// اعتبارسنجی JWT
 	istrue, err := services.MyJwt(ctx)
 	if !istrue {
@@ -397,85 +383,46 @@ func (c *UserController) WalletInfo(ctx http.Context) http.Response {
 		})
 	}
 	kal := "kal" + user.MelliNumber
-
 	// تنظیم جدول بر اساس پارامتر type
 	switch walletType {
 	case "gold":
+		//var wallets models.WalletGold
 		query = fmt.Sprintf("SELECT * FROM wallet_gold WHERE melli_number = '%s' %s %s ORDER BY event_time DESC", kal, timeCondition, orderCondition)
 		s, e := services.NewWalletService()
 
 		wallets, e := s.Queryforgold(query)
-		if e != nil || len(wallets) == 0 {
-			// اگر نتیجه خالی است، یک رکورد با مقادیر صفر بدون MelliNumber ارسال می‌کنیم
-			emptyWallet := []WalletResponse{{
-				BalanceIn:     0,
-				BalanceOut:    0,
-				FeebalanceIn:  0,
-				FeebalanceOut: 0,
-				FreezBlIn:     0,
-				FreezBlOut:    0,
-				BanBlIn:       0,
-				BanBlOut:      0,
-				EventTime:     time.Now(),
-			}}
-			return ctx.Response().Json(http.StatusOK, emptyWallet)
-		}
-		// حذف MelliNumber از نتایج
-		var walletResponses []WalletResponse
-		for _, wallet := range wallets {
-			walletResponses = append(walletResponses, WalletResponse{
-				BalanceIn:     wallet.BalanceIn,
-				BalanceOut:    wallet.BalanceOut,
-				FeebalanceIn:  wallet.FeebalanceIn,
-				FeebalanceOut: wallet.FeebalanceOut,
-				FreezBlIn:     wallet.FreezBlIn,
-				FreezBlOut:    wallet.FreezBlOut,
-				BanBlIn:       wallet.BanBlIn,
-				BanBlOut:      wallet.BanBlOut,
-				EventTime:     wallet.EventTime,
+		fmt.Printf("e", e)
+		fmt.Printf("wallets 6", wallets)
+		fmt.Println(wallets)
+		if e != nil {
+			return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
+				"status": "badrequest",
 			})
 		}
-		return ctx.Response().Json(http.StatusOK, walletResponses)
+		return ctx.Response().Json(http.StatusOK, wallets)
 
 	case "rial":
+
 		query = fmt.Sprintf("SELECT * FROM wallet_rial WHERE melli_number = '%s' %s %s ORDER BY event_time DESC", kal, timeCondition, orderCondition)
+
 		s, e := services.NewWalletServiceRial()
 
 		wallets, e := s.Queryforrial(query)
-		if e != nil || len(wallets) == 0 {
-			// اگر نتیجه خالی است، یک رکورد با مقادیر صفر بدون MelliNumber ارسال می‌کنیم
-			emptyWallet := []WalletResponse{{
-				BalanceIn:  0,
-				BalanceOut: 0,
-				FreezBlIn:  0,
-				FreezBlOut: 0,
-				BanBlIn:    0,
-				BanBlOut:   0,
-				EventTime:  time.Now(),
-			}}
-			return ctx.Response().Json(http.StatusOK, emptyWallet)
-		}
-		// حذف MelliNumber از نتایج
-		var walletResponses []WalletResponse
-		for _, wallet := range wallets {
-			walletResponses = append(walletResponses, WalletResponse{
-				BalanceIn:  wallet.BalanceIn,
-				BalanceOut: wallet.BalanceOut,
-				FreezBlIn:  wallet.FreezBlIn,
-				FreezBlOut: wallet.FreezBlOut,
-				BanBlIn:    wallet.BanBlIn,
-				BanBlOut:   wallet.BanBlOut,
-				EventTime:  wallet.EventTime,
+		fmt.Printf("e", e)
+		fmt.Printf("wallets 6", wallets)
+		if e != nil {
+			return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
+				"status": "badrequest",
 			})
 		}
-		return ctx.Response().Json(http.StatusOK, walletResponses)
-
+		return ctx.Response().Json(http.StatusOK, wallets)
 	default:
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{
 			"status": "badrequest",
 			"error":  "Invalid wallet type",
 		})
 	}
+
 }
 
 func generateOtp() string {

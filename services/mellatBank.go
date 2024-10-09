@@ -132,6 +132,14 @@ func (c *Client) getBankError(result string) error {
 	}
 }
 
+func MellatClient() *Client {
+	return &Client{
+		TerminalId: "7822137",
+		UserName:   "7822137",
+		Password:   "40917160",
+	}
+}
+
 func (c *Client) PaymentRequest(orderId, amount int64, localDate, localTime time.Time, additionalData, callBackUrl string) (string, error) {
 	soap, err := gosoap.SoapClient(serviceURL)
 	if err != nil {

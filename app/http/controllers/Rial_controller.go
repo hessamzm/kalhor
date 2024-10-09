@@ -21,7 +21,7 @@ func (g *RialWalletController) SharjHesab(ctx http.Context) http.Response {
 
 	// دریافت مبلغ از پارامترهای درخواست
 	amountStr := ctx.Request().Input("amount")
-	amount, e := strconv.ParseFloat(amountStr, 64)
+	amount, e := strconv.ParseInt(amountStr, 10, 64)
 	if e != nil || amount <= 0 {
 		return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "مبلغ نامعتبر است"})
 	}
@@ -30,21 +30,30 @@ func (g *RialWalletController) SharjHesab(ctx http.Context) http.Response {
 	var user models.User
 	facades.Auth(ctx).User(&user)
 
-	// ایجاد درخواست پرداخت
-	paymentService := services.NewPaymentService()
-	paymentUrl, err := paymentService.CreatePayment(user.ID, amount)
-	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "خطا در ایجاد درخواست پرداخت"})
-	}
+	//
+	//client := services.MellatClient()
+	//
+	//// ایجاد درخواست پرداخت
+	//
+	////paymentService, error := client.PaymentRequest(1, amount, time.Now(), time.Now(), "test", "app.kalhorgold.ir/form")
+	//
+	//if error != nil || amount <= 0 {
+	//	return ctx.Response().Json(http.StatusBadRequest, map[string]string{"error": "مبلغ نامعتبر است"})
+	//}
 
-	// ذخیره اطلاعات تراکنش در دیتابیس
-	err = g.walletrial.SaveTransaction(user.ID, amount, "pending")
-	if err != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "خطا در ذخیره اطلاعات تراکنش"})
-	}
+	//paymentUrl, err := paymentService.CreatePayment(user.ID, amount)
+	//if err != nil {
+	//	return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "خطا در ایجاد درخواست پرداخت"})
+	//}
+	//
+	//// ذخیره اطلاعات تراکنش در دیتابیس
+	//err = g.walletrial.SaveTransaction(user.ID, amount, "pending")
+	//if err != nil {
+	//	return ctx.Response().Json(http.StatusInternalServerError, map[string]string{"error": "خطا در ذخیره اطلاعات تراکنش"})
+	//}
 
 	// ارسال لینک پرداخت به کاربر
-	return ctx.Response().Json(http.StatusOK, map[string]string{"payment_url": paymentUrl})
+	return ctx.Response().Json(http.StatusOK, map[string]string{"payment_url": "paymentUrl"})
 }
 
 func (g *GoldController) DeSharjHesab(ctx http.Context) http.Response {
