@@ -8,11 +8,11 @@ import (
 type User struct {
 	orm.Model
 	Name          string
-	MelliNumber   string `json:"mellinumber" gorm:"unique"`
-	Phone         string `json:"username"`
-	Email         string `json:"email"`
-	KartInfo      string `json:"kartinfo"`
-	TarikhTavalod string `json:"tarikh_tavalod"`
+	MelliNumber   string    `json:"mellinumber" gorm:"unique"`
+	Phone         string    `json:"username"`
+	Email         string    `json:"email"`
+	KartInfo      string    `json:"kartinfo"`
+	TarikhTavalod time.Time `json:"tarikh_tavalod"`
 	StepLvl       int64
 	UserNum       string
 	OtpCode       bool
