@@ -53,6 +53,18 @@ func NewMellatService() (*MellatService, error) {
 }
 
 // insert to
+
+func (s *MellatService) InsertPaymentGateway(id int64, refId, encPan, enc, phoneNumber, body, saleOrderID, saleReference, resCode string, amount float64) error {
+	if utils.KlDebug {
+		fmt.Printf("Inserting into payment_gateway: %d, %s, %s, %s, %s, %s, %s, %s, %s, %.2f\n", id, refId, encPan, enc, phoneNumber, body, saleOrderID, saleReference, resCode, amount)
+	}
+	query := `
+		INSERT INTO payment_gateway (ID, RefID, EncPan, Enc, PhoneNumber, Body, SaleOrderID, SaleReference, ResCode, Amount, CreatedAt, UpdatedAt)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	now := time.Now()
+	return s.db.Exec(context.Background(), query, id, refId, encPan, enc, phoneNumber, body, saleOrderID, saleReference, resCode, amount, now, now)
+}
 func (s *MellatService) InsertMellatForm(refId, phoneNumber, body, encPan, encMelliNumber string) error {
 	if utils.KlDebug {
 		fmt.Println("insert mellatdb", refId, phoneNumber, body, encPan, encMelliNumber)
@@ -60,6 +72,7 @@ func (s *MellatService) InsertMellatForm(refId, phoneNumber, body, encPan, encMe
 	query := `INSERT INTO mellatform (RefID, PhoneNumber, Body, EncPan, Enc) VALUES (?, ?, ?, ?, ?)`
 	return s.db.Exec(context.Background(), query, refId, phoneNumber, body, encPan, encMelliNumber)
 }
+
 func (s *WalletService) InsertWalletGold(gw *models.WalletGold) error {
 	if utils.KlDebug {
 		fmt.Println("insert wallet gold:", gw)

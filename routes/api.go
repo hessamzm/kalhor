@@ -13,6 +13,7 @@ func Api() {
 	NotificationController := controllers.NotificationController{}
 	TicketController := controllers.TicketController{}
 	GoldWallet := controllers.GoldController{}
+	RialController := controllers.RialWalletController{}
 
 	//afterlogin := facades.Route().Middleware(middleware.Auth())
 
@@ -32,6 +33,7 @@ func Api() {
 	facades.Route().Middleware(middleware.Auth()).Get("/userinfo", userController.UserInfo)
 	facades.Route().Middleware(middleware.Auth()).Get("/userwallet/:time-frame/:order/:type", userController.WalletInfo)
 	facades.Route().Post("/send-message", NotificationController.SendMessage)
+	facades.Route().Middleware(middleware.Auth()).Get("/rial", RialController.SharjHesab)
 
 	//notif
 
