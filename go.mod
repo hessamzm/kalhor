@@ -1,6 +1,6 @@
 module kalhor
 
-go 1.23.0
+go 1.23
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.29.0
