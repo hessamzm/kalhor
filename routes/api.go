@@ -33,7 +33,10 @@ func Api() {
 	facades.Route().Middleware(middleware.Auth()).Get("/userinfo", userController.UserInfo)
 	facades.Route().Middleware(middleware.Auth()).Get("/userwallet/:time-frame/:order/:type", userController.WalletInfo)
 	facades.Route().Post("/send-message", NotificationController.SendMessage)
-	facades.Route().Middleware(middleware.Auth()).Get("/rial", RialController.SharjHesab)
+
+	/// rial
+	facades.Route().Middleware(middleware.Auth()).Post("/askrial", RialController.AskSharjHesab)
+	facades.Route().Middleware(middleware.Auth()).Get("/verifyrial", RialController.VerifySharjHessab)
 
 	//notif
 

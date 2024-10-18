@@ -14,4 +14,5 @@ type WalletRial struct {
 	BanBlOut    float64   `ch:"ban_bl_out"`
 	EventTime   time.Time `ch:"event_time"` // ثبت زمان تراکنش
 	TrakoneshId string    `ch:"trakonesh_id"`
+	Authority   string    `ch:"authority"`
 }

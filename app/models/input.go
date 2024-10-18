@@ -8,4 +8,5 @@ type Input struct {
 	KartInfo      string `json:"kartinfo"`
 	TarikhTavalod string `json:"tarikh_tavalod"`
 	Code          string `json:"code"`
+	Amount        string `json:"amount"`
 }

@@ -54,17 +54,30 @@ func NewMellatService() (*MellatService, error) {
 
 // insert to
 
-func (s *MellatService) InsertPaymentGateway(id int64, refId, encPan, enc, phoneNumber, body, saleOrderID, saleReference, resCode string, amount float64) error {
+func (s *MellatService) InsertPaymentGatewayLevl1(wr *models.WalletRial) error {
 	if utils.KlDebug {
-		fmt.Printf("Inserting into payment_gateway: %d, %s, %s, %s, %s, %s, %s, %s, %s, %.2f\n", id, refId, encPan, enc, phoneNumber, body, saleOrderID, saleReference, resCode, amount)
+		fmt.Println("income to InsertPaymentGatewayLevl1 :", wr)
 	}
 	query := `
-		INSERT INTO payment_gateway (ID, RefID, EncPan, Enc, PhoneNumber, Body, SaleOrderID, SaleReference, ResCode, Amount, CreatedAt, UpdatedAt)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO wallet_rial (melli_number , freez_bl_in , event_time , authority )
+		VALUES (?, ?, ?, ?)
 	`
-	now := time.Now()
-	return s.db.Exec(context.Background(), query, id, refId, encPan, enc, phoneNumber, body, saleOrderID, saleReference, resCode, amount, now, now)
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	return s.db.Exec(context.Background(), query, wr.MelliNumber, wr.FreezBlIn, now, wr.Authority)
 }
+
+func (s *MellatService) QueryPaymentGatewayLevl1(authority string, wr *models.WalletRial) error {
+
+	query := `SELECT freez_bl_in FROM wallet_rial WHERE authority = ?`
+
+	err := s.db.QueryRow(context.Background(), query, authority).Scan(&wr)
+	if err != nil {
+		return err
+	}
+	return s.db.Exec(context.Background(), query, wr.FreezBlIn)
+}
+
 func (s *MellatService) InsertMellatForm(refId, phoneNumber, body, encPan, encMelliNumber string) error {
 	if utils.KlDebug {
 		fmt.Println("insert mellatdb", refId, phoneNumber, body, encPan, encMelliNumber)
