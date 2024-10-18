@@ -172,14 +172,14 @@ func (g *RialWalletController) VerifySharjHessab(ctx http.Context) http.Response
 		})
 	}
 
-	s, e := services.NewMellatService()
-	if e != nil {
-		return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
-			"error": e.Error(),
-		})
-	}
+	//s, e := services.NewMellatService()
+	//if e != nil {
+	//	return ctx.Response().Json(http.StatusInternalServerError, map[string]string{
+	//			"error": e.Error(),
+	//		})
+	//	}
 
-	err := s.QueryPaymentGatewayLevl1()
+	//err := s.QueryPaymentGatewayLevl1()
 
 	clinet := services.NewPaymentGatewayImplementationServicePortType("", false, nil)
 
