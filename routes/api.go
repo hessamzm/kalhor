@@ -36,7 +36,7 @@ func Api() {
 
 	/// rial
 	facades.Route().Middleware(middleware.Auth()).Post("/askrial", RialController.AskSharjHesab)
-	facades.Route().Middleware(middleware.Auth()).Get("/verifyrial", RialController.VerifySharjHessab)
+	facades.Route().Middleware(middleware.Auth()).Post("/verifyrial", RialController.VerifySharjHessab)
 
 	//notif
 

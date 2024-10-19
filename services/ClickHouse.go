@@ -67,15 +67,39 @@ func (s *MellatService) InsertPaymentGatewayLevl1(wr *models.WalletRial) error {
 	return s.db.Exec(context.Background(), query, wr.MelliNumber, wr.FreezBlIn, now, wr.Authority)
 }
 
+func (s *MellatService) InsertPaymentGatewayLevl2(wr *models.WalletRial, id string) error {
+	if utils.KlDebug {
+		fmt.Println("income to InsertPaymentGatewayLevl2 :", wr)
+	}
+	query := `
+		INSERT INTO wallet_rial (melli_number , balance_in , event_time , trakonesh_id )
+		VALUES (?, ?, ?, ?)
+	`
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	if utils.KlDebug {
+		fmt.Println("query:", query)
+		fmt.Println("MelliNumber :", wr.MelliNumber)
+		fmt.Println("FreezBlIn :", wr.FreezBlIn)
+		fmt.Println("id", id)
+	}
+
+	return s.db.Exec(context.Background(), query, wr.MelliNumber, wr.FreezBlIn, now, id)
+}
+
 func (s *MellatService) QueryPaymentGatewayLevl1(authority string, wr *models.WalletRial) error {
+	query := `SELECT freez_bl_in, melli_number FROM wallet_rial WHERE authority = ?`
+	err := s.db.QueryRow(context.Background(), query, authority).Scan(&wr.FreezBlIn, &wr.MelliNumber)
 
-	query := `SELECT freez_bl_in FROM wallet_rial WHERE authority = ?`
+	if utils.KlDebug {
+		fmt.Println(wr.FreezBlIn)
+		fmt.Println(wr.MelliNumber)
+	}
 
-	err := s.db.QueryRow(context.Background(), query, authority).Scan(&wr)
 	if err != nil {
 		return err
 	}
-	return s.db.Exec(context.Background(), query, wr.FreezBlIn)
+	return nil
 }
 
 func (s *MellatService) InsertMellatForm(refId, phoneNumber, body, encPan, encMelliNumber string) error {

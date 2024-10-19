@@ -20,7 +20,15 @@ func UserInfo(u models.User) map[string]any {
 			"error": "Failed to retrieve price",
 		}
 	}
-	byprice := price.ByPrice
+	error := facades.Orm().Query().Order("updated_at desc").First(&price)
+	if error != nil {
+		// اگر خطا رخ دهد
+		return map[string]any{
+			"error": "Failed to retrieve price",
+		}
+	}
+
+	byprice := price.Base_18 + price.Base_18*1/100
 	s, e := services.NewWalletService()
 
 	// جمع کل هزینه‌ها
@@ -109,6 +117,16 @@ func UserWallet(u models.User) map[string]any {
 	profit, e := s.GetBalanceDifference(u.MelliNumber)
 	totalrial, e := s.GetBalanceDifferenceRial(u.MelliNumber)
 
+	error := facades.Orm().Query().Order("updated_at desc").First(&price)
+	if error != nil {
+		// اگر خطا رخ دهد
+		return map[string]any{
+			"error": "Failed to retrieve price",
+		}
+	}
+
+	byprice := price.Base_18 + price.Base_18*1/100
+
 	err := facades.Orm().Query().Order("updated_at desc").First(&price)
 	if err != nil {
 		// اگر خطا رخ دهد
@@ -127,7 +145,7 @@ func UserWallet(u models.User) map[string]any {
 		return map[string]any{"error": e.Error()}
 	}
 
-	goldtorial := profit * price.ByPrice
+	goldtorial := profit * byprice
 
 	return map[string]any{
 		"user-number": u.UserNum,

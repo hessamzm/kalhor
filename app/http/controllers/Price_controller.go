@@ -56,10 +56,8 @@ func (p *PriceController) Get(ctx http.Context) http.Response {
 
 	// اگر داده‌ای پیدا شد
 	return ctx.Response().Json(http.StatusOK, http.Json{
-		"قیمت خرید":         price.ByPrice,
-		"قیمت فروش":         price.SellPrice,
-		"پایه قیمت 18 عیار": price.Base_18,
-		"پایه قیمت 24 عیار": price.Base_24,
+		"18": price.Base_18,
+		"24": price.Base_24,
 	})
 }
 
@@ -70,6 +68,12 @@ func (p *PriceController) Put(ctx http.Context) http.Response {
 
 		return ctx.Response().Json(http.StatusBadRequest, http.Json{
 			"error": err.Error(),
+		})
+	}
+
+	if input.AdminToken != "xsYIY04ufZPSrxKUTjBXYQuiXSMijdcM" {
+		return ctx.Response().Json(http.StatusBadRequest, http.Json{
+			"token": "err",
 		})
 	}
 
@@ -84,8 +88,6 @@ func (p *PriceController) Put(ctx http.Context) http.Response {
 	}
 
 	// به‌روزرسانی یا ایجاد رکورد
-	price.SellPrice = inputPrice.SellPrice
-	price.ByPrice = inputPrice.ByPrice
 	price.Base_18 = inputPrice.Base_18
 	price.Base_24 = inputPrice.Base_24
 	price.UpdatedAt = time.Now()

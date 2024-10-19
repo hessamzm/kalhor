@@ -1,10 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/goravel/framework/contracts/http"
 	"github.com/goravel/framework/facades"
 	"kalhor/app/models"
 	"kalhor/services"
+	"kalhor/utils"
 	"strconv"
 )
 
@@ -16,8 +18,6 @@ var formgold struct {
 	Q string `json:"qaunty"`
 	R string `json:"rial"`
 }
-var byprice = 1.0
-var Sellprice = 0.9
 
 func (g *GoldController) ByGold(ctx http.Context) http.Response {
 
@@ -27,6 +27,22 @@ func (g *GoldController) ByGold(ctx http.Context) http.Response {
 	istrue, err := services.MyJwt(ctx)
 	if !istrue {
 		return ctx.Response().Json(http.StatusUnauthorized, map[string]string{"error": err})
+	}
+
+	error := facades.Orm().Query().Order("updated_at desc").First(&price)
+	if error != nil {
+		// اگر خطا رخ دهد
+		return ctx.Response().Json(http.StatusInternalServerError, http.Json{
+			"error": "Failed to retrieve price",
+		})
+	}
+
+	byprice := price.Base_18 + price.Base_18*1/100
+
+	if utils.KlDebug {
+		// چاپ داده‌ها برای اشکال‌زدایی
+		fmt.Printf("Retrieved price data: %+v\n", price)
+
 	}
 
 	// دریافت اطلاعات کاربر
@@ -84,6 +100,16 @@ func (g *GoldController) SellGold(ctx http.Context) http.Response {
 			"error": err.Error(),
 		})
 	}
+
+	error := facades.Orm().Query().Order("updated_at desc").First(&price)
+	if error != nil {
+		// اگر خطا رخ دهد
+		return ctx.Response().Json(http.StatusInternalServerError, http.Json{
+			"error": "Failed to retrieve price",
+		})
+	}
+
+	Sellprice := price.Base_18 + price.Base_18*1/100
 
 	totalgold, e := s.GetBalanceDifference(user.MelliNumber)
 

@@ -9,4 +9,6 @@ type Input struct {
 	TarikhTavalod string `json:"tarikh_tavalod"`
 	Code          string `json:"code"`
 	Amount        string `json:"amount"`
+	Authority     string `json:"authority"`
+	AdminToken    string `json:"admin_token"`
 }
