@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DdlMappings">
+    <mapping uuid="5a97488c-733f-4f8a-83da-af5714d360fa" name="kalhoregold@localhost (DDL) Mapping">
+      <data-sources db="63c36b82-1b97-4afd-95eb-61228bcbb5e6" ddl="420a0f07-6028-4dff-9fd9-f084198b472c" />
+    </mapping>
+  </component>
+  <component name="SqlDataSourceStorage">
+    <option name="dataSources">
+      <list>
+        <State>
+          <option name="id" value="420a0f07-6028-4dff-9fd9-f084198b472c" />
+          <option name="name" value="kalhoregold@localhost (DDL)" />
+          <option name="dbmsName" value="CLICKHOUSE" />
+          <option name="urls">
+            <array>
+              <option value="file://$PROJECT_DIR$" />
+            </array>
+          </option>
+          <option name="outLayout" value="File per object by schema.groovy" />
+        </State>
+      </list>
+    </option>
+  </component>
+</project>

@@ -1,9 +1,12 @@
+# مرحله 1: ساخت برنامه
 FROM ubuntu:22.04 AS builder
 
 # نصب ابزارهای لازم
-RUN apt-get update && \
-    apt-get install -y curl golang git && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt update && \
+    apt install -y software-properties-common && \
+    add-apt-repository -y ppa:longsleep/golang-backports && \
+    apt update && \
+    apt install -y golang-go curl
 
 # تنظیمات محیط
 ENV GO111MODULE=on \
@@ -12,34 +15,32 @@ ENV GO111MODULE=on \
     GOOS=linux
 
 # دایرکتوری کاری
-WORKDIR /
+WORKDIR /app
 
 # کپی فایل‌های go.mod و go.sum
-COPY /go.mod .
-COPY /go.sum .
+COPY go.mod go.sum ./
 
 # دانلود وابستگی‌ها
 RUN GOPROXY=https://goproxy.cn go mod download
 
 # کپی سایر فایل‌های پروژه
-COPY / .
+COPY . .
 
 # ساخت برنامه
 RUN go build -o main .
 
-# مرحله دوم: تصویر نهایی
+# مرحله 2: تصویر نهایی
 FROM ubuntu:22.04
 
 # تنظیم دایرکتوری کاری
 WORKDIR /www/wwwroot/app.kalhorgold.ir
 
 # کپی فایل اجرایی و سایر منابع
-COPY --from=builder /main .
-COPY --from=builder /public ./public/
-COPY --from=builder /storage ./storage/
-COPY --from=builder /resources ./resources/
-COPY --from=builder /.env .
+COPY --from=builder /app/main .
+COPY --from=builder /app/public ./public/
+COPY --from=builder /app/storage ./storage/
+COPY --from=builder /app/resources ./resources/
+COPY --from=builder /app/.env .
 
 # اجرای برنامه
 ENTRYPOINT ["./main"]
-
