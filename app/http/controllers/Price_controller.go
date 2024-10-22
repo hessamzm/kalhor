@@ -16,10 +16,11 @@ var statusPrice struct {
 }
 
 var inputPrice struct {
-	SellPrice float64 `json:"sellprice"` // تگ JSON به درستی تعریف شده
-	ByPrice   float64 `json:"byprice"`   // حذف تگ اضافی JSON
-	Base_18   float64 `json:"base_18"`
-	Base_24   float64 `json:"base_24"`
+	AdminToken string  `json:"admin_token"`
+	SellPrice  float64 `json:"sellprice"` // تگ JSON به درستی تعریف شده
+	ByPrice    float64 `json:"byprice"`   // حذف تگ اضافی JSON
+	Base_18    float64 `json:"base_18"`
+	Base_24    float64 `json:"base_24"`
 }
 
 var ojratPrice struct {
@@ -71,7 +72,7 @@ func (p *PriceController) Put(ctx http.Context) http.Response {
 		})
 	}
 
-	if input.AdminToken != "xsYIY04ufZPSrxKUTjBXYQuiXSMijdcM" {
+	if inputPrice.AdminToken != "xsYIY04ufZPSrxKUTjBXYQuiXSMijdcM" {
 		return ctx.Response().Json(http.StatusBadRequest, http.Json{
 			"token": "err",
 		})

@@ -42,3 +42,4 @@ COPY --from=builder /.env .
 
 # اجرای برنامه
 ENTRYPOINT ["./main"]
+
